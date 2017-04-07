@@ -1,0 +1,13 @@
+.box input[type=checkbox]:checked + label{
+    color: black;
+
+}
+.box{
+  text-align: left;
+  padding-left: 5%;
+
+}
+
+.box label{
+  color: grey;
+}

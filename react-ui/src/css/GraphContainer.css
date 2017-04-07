@@ -1,0 +1,44 @@
+.graph-container{
+  width: 100%;
+  height: 400px;
+  overflow: visible;
+}
+.graph-upper-panel{
+
+}
+
+
+.svgClassName{
+
+  left:-10%;
+  z-index: -1;
+
+
+}
+.metric-container{
+  position: absolute;
+  top:420px;
+  width: 100%;
+  font-size: 70%;
+  padding-left: 30px;
+  text-align: left;
+}
+.price-tag{
+  line-height: 0px;
+  font-size: 80%;
+  width: 80px;
+  margin-left: 10px;
+  float: left
+}
+.border-section{
+  margin-top: 3px;
+  margin-bottom: 3px;
+  border-style:solid;
+  border-color: lightgrey;
+}
+.clear-both{
+  clear: both;
+}
+#price-tag-section{
+  margin-left: 150px;
+}

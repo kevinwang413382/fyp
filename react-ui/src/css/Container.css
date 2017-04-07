@@ -1,0 +1,16 @@
+.setting-container{
+  position: absolute;
+  left: 0;
+  width: 30%;
+
+
+}
+.graph-container{
+  margin-top: 3px;
+  margin-bottom: 3px;
+  border-style:solid;
+  border-color: lightgrey;
+  position: absolute;
+  left: 32%;
+  width: 50%;
+}

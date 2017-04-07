@@ -1,0 +1,16 @@
+.date-input{
+  float: left;
+  text-align: left;
+  margin-right: 30px;
+  height:30px;
+  margin-top: 5px;
+}
+
+.date-input label{
+  margin-right: 2px;
+  font-size: 80%;
+}
+
+.date-input input{
+  width: 80px;
+}
