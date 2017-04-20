@@ -7,7 +7,7 @@ class DateInput extends Component{
     super(props);
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onChange  = this.onChange.bind(this);
-    this.state = {value: ""};
+    this.state = {value: this.props.default_value};
   }
   onKeyDown(e){
     if(e.keyCode==8){         //backspace keystroke

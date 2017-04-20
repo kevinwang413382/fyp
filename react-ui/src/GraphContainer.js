@@ -19,68 +19,30 @@ class GraphContainer extends Component{
         super(props);
         this.handleTimeRangeChange = this.handleTimeRangeChange.bind(this);
         this.handleTrackerChanged = this.handleTrackerChanged.bind(this);
-        this.buildPoints = this.buildPoints.bind(this);
-        const timeSeries = new TimeSeries({
-            name: "Currency",
-            columns: ["time", "actual_price", "predicted_price"],
-            points: this.buildPoints(this.props.graph)
-        }); 
-        var metrics = [];
-        for(var index in this.props.graph.metrics){
-          var obj = {id: index, value:this.props.graph.metrics[index]};
-          metrics.push(obj);
-        }
+
+
+
 
         this.state = {
+            showMetrics: true,
             showDot: false,
             height: 300,
             tracker: null,
             actual_price: "--",
             predicted_price: "--",
             trackerEvent: null,
-            timerange:  timeSeries.range(),
-            timeSeries: timeSeries,
-            metric: metrics
+            timerange:  this.props.timeseries.range(),
+            timeseries: this.props.timeseries,
+            metric: this.props.metrics,
+            params: this.props.params
         };
     }
-    buildPoints(actual_data) {
-        let points = [];
-        // for (let i = 0; i < audPoints.length; i++) {
-        //     points.push([audPoints[i][0], audPoints[i][1], euroPoints[i][1]]);
-        // }
-        var last_unix_time;
 
-        for(let i = 0; i < actual_data.graph_data.length; i++){
-
-          var date_string = actual_data.graph_data[i]['date'].substring(0, 10)+ " 00:00:00";
-          var unix_time = new Date(date_string).getTime();
-          if(i == actual_data.graph_data.length-1) last_unix_time = unix_time;
-    //1490976000000
-          points.push(  [unix_time,
-                        actual_data.graph_data[i]['prediction'],
-                        actual_data.graph_data[i]['label']]
-                    )
-        }
-
-        for(var point of actual_data.actual_prediction){
-          console.log(point.prediction);
-          //
-           points.push([
-             last_unix_time + point['day']*86400000,
-             point.prediction,
-             point.prediction
-           ]);
-          //
-          // console.log(point);
-        }
-
-        return points;
-    }
 
 
     handleTrackerChanged(t) {
       if(t){
-        const e = this.state.timeSeries.atTime(t);
+        const e = this.state.timeseries.atTime(t);
         const eventTime = new Date(
         e.begin().getTime() + (e.end().getTime() - e.begin().getTime()) / 2);
            //trim to 2nd position in decimal
@@ -143,16 +105,16 @@ class GraphContainer extends Component{
 
         let euroValue, audValue;
         if (this.state.tracker) {
-            const index = this.state.timeSeries.bisect(this.state.tracker);
-            const trackerEvent = this.state.timeSeries.at(index);
+            const index = this.state.timeseries.bisect(this.state.tracker);
+            const trackerEvent = this.state.timeseries.at(index);
             audValue = `${f(trackerEvent.get("actual_price"))}`;
             euroValue = `${f(trackerEvent.get("predicted_price"))}`;
         }
 
         return (
             <div>
-                <button>{this.props.graph.graph_data.length}</button>
-                <div className = "graph-upper-panel border-section">
+                <p>{this.props.timeseries.name()}</p>
+                <div className = "graph-upper-panel">
                     <div  style={{ height: 14 }}>
                         <div >
                              {`${df(this.state.tracker)}` }
@@ -170,16 +132,14 @@ class GraphContainer extends Component{
                         </div>
                         <div className = "clear-both"/>
                     </div>
-                </div>
 
-
-                <div className="row">
+                    <div className="row">
                     <div className="col-md-12">
                         <Resizable>
                             <ChartContainer
                                 timeRange={range}
-                                maxTime={this.state.timeSeries.range().end()}
-                                minTime={this.state.timeSeries.range().begin()}
+                                maxTime={this.state.timeseries.range().end()}
+                                minTime={this.state.timeseries.range().begin()}
                                 trackerPosition={this.state.tracker}
                                 onTrackerChanged={this.handleTrackerChanged}
                                 onBackgroundClick={() =>this.setState({ selection: null })}
@@ -201,7 +161,7 @@ class GraphContainer extends Component{
                                         <LineChart
                                             axis="y"
                                             breakLine={false}
-                                            series={this.state.timeSeries}
+                                            series={this.state.timeseries}
                                             columns={["actual_price", "predicted_price"]}
                                             style={style}
                                             highlight={this.state.highlight}
@@ -217,19 +177,51 @@ class GraphContainer extends Component{
                         </Resizable>
                     </div>
                 </div>
-                <div className = "metric-container border-section">{
-                    this.state.metric.map(function(obj){
+                <div className = 'graph-lower-panel'>
+                   <button onClick = {function(){this.setState({showMetrics:true })}.bind(this)}>Metrics</button>
+                   <button onClick = {function(){this.setState({showMetrics:false})}.bind(this)}>Options</button>
+                   <div className = 'clear-both'></div>
+                   </div>
+                   <div>{
+                   (this.state.showMetrics)?
+                     <div className = "metric-container border-section">{
+                         this.props.metrics.map(function(obj){
+                           return (
+                             <p> {obj.id +": "+ obj.value}  </p>
+                           );
+                         })
+                       }
+                     </div>
+                     :
+                     <div className = ' params-container border-section'>
+                      <table>
 
-                      return (
+                        <tr>
+                          <td>Model </td>
+                          <td>Features </td>
+                          <td>Training </td>
+                          <td>Testing </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <div> {this.state.params.model_to_use} </div>
+                          </td>
+                          <td>
+                            <div className = 'params-container-features'>{
+                              this.state.params.features_to_use.map(function(obj,index){
+                              return(<div>{obj}</div>)
+                              })}
+                            </div>
+                          </td>
+                          <td>{ this.state.params.start_train+" - "+this.state.params.end_train}</td>
+                          <td>{ this.state.params.start_test+" - "+this.state.params.end_test}</td>
+                        </tr>
+                      </table>
+                     </div>
+                   }</div>
 
-                        <p>
-                          {obj.id +": "+ obj.value}
-                        </p>
-                      );
-                    })
-                  }
                 </div>
-                <div className = "clear-both"/>
+
             </div>
         );
     }

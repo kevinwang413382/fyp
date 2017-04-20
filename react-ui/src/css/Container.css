@@ -11,6 +11,14 @@
   border-style:solid;
   border-color: lightgrey;
   position: absolute;
-  left: 32%;
+  left: 37%;
   width: 50%;
+}
+.graph-select-list{
+  position: absolute;
+  top: 90px;
+  left:90%;
+  width: 10%;
+  height: 100px;
+  overflow-y: scroll;
 }

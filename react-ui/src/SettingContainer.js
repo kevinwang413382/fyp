@@ -5,14 +5,17 @@ import './css/SettingContainer.css';
 import ReactDOM from 'react-dom';
 const TYPE_CHECK_BOX_ALGO  = 'TYPE_CHECK_BOX_ALGO';
 const TYPE_CHECK_BOX_FEATURES  = 'TYPE_CHECK_BOX_FEATURES';
-const TYPE_OPTION     = 'TYPE_OPTION';
-
+const TYPE_CHECK_BOX_ADDITIONAL_FEATURES = 'TYPE_CHECK_BOX_ADDITIONAL_FEATURES'
+const TYPE_OPTION = 'TYPE_OPTION';
+const TYPE_OPTION_TIME = 'time';
+const TYPE_OPTION_ALGO = 'model_to_use';
 // DATE
+const MONTHS= ["Jan",'Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TYPE_DATE_INPUT = 'TYPE_DATE_INPUT';
-const ID_DATE_INPUT_TRAIN_START = 'date_train_start';
-const ID_DATE_INPUT_TRAIN_END = 'date_train_end';
-const ID_DATE_INPUT_TEST_START = 'date_test_start';
-const ID_DATE_INPUT_TEST_END = 'date_test_end';
+const ID_DATE_INPUT_TRAIN_START = 'start_train';
+const ID_DATE_INPUT_TRAIN_END = 'end_train';
+const ID_DATE_INPUT_TEST_START = 'start_test';
+const ID_DATE_INPUT_TEST_END = 'end_test';
 const DATE_INPUT_ID_LIST = [
   ID_DATE_INPUT_TRAIN_START ,
   ID_DATE_INPUT_TRAIN_END,
@@ -23,16 +26,32 @@ const DATE_INPUT_ID_LIST = [
 const LABEL_DATE_INPUT_START = "Start";
 const LABEL_DATE_INPUT_END =   "End  ";
 const STATE_FEATURES = "features";
+const STATE_ADDITIONAL_FEATURES = 'additional_features'
 const STATE_ALGORITHMS = "algorithms";
+
+const DEFAULT_TRAIN_START = '';
+const DEFAULT_TRAIN_END = ''
+const DEFAULT_TEST_START= '';
+const DEFAULT_TEST_END = '';
+
+
 var keyLock = false;
 const algorithms =
     [
-        {id:'algo_rf', label: 'Random Forest'},
-        {id:'algo_dt', label: 'Decision Tree'},
-        {id:'algo_gbt', label: 'GBT'},
-        {id:'algo_nn', label: 'Neural Network'}
+        {id:'REGRESS_RAND_FOREST', label: 'Random Forest'},
+        {id:'REGRESS_DEC_TREE', label: 'Decision Tree'},
+        {id:'REGRESS_GBT', label: 'GBT'},
+        {id:'REGRESS_GLR', label: 'GLR'}
     ]
 
+const additional_features = [
+  {id:'yuan',label:'RMB'},
+  {id:'gold',label:'Gold'},
+  {id:'oil',label:'Oil'},
+  {id:'snp',label:'S&P500'},
+  {id:'twitter',label:'Twitter'},
+  {id:'sse',label:'ShangHai Exchange'}
+]
 const features =
     [
         {id: 'avg-block-size'     ,label: 'Block Size'},
@@ -54,27 +73,42 @@ class SettingContainer extends Component{
       super(props);
       this.onChange = this.onChange.bind(this);
       this.train = this.train.bind(this);
+      this.setAllFeatures = this.setAllFeatures.bind(this);
       var default_states = {};
       default_states[TYPE_OPTION] = "daily";                  // avoid magic word
-      for(var date_input of DATE_INPUT_ID_LIST){
-        default_states[date_input] = ""
-      }
-      // default_states[ID_DATE_INPUT_TRAIN_END] = "";
-      // default_states[ID_DATE_INPUT_TRAIN_START] = "";
-      // default_states[ID_DATE_INPUT_TEST_END] = "";
-      // default_states[ID_DATE_INPUT_TEST_START] = "";
-      default_states[STATE_ALGORITHMS] =[];
-      for(var algo of algorithms){
-        default_states[STATE_ALGORITHMS][algo.id] = false;
-      }
+
+      const ID_DATE_INPUT_TRAIN_START = 'start_train';
+      const ID_DATE_INPUT_TRAIN_END = 'end_train';
+      const ID_DATE_INPUT_TEST_START = 'start_test';
+      const ID_DATE_INPUT_TEST_END = 'end_test'
+      default_states[ID_DATE_INPUT_TRAIN_START] = DEFAULT_TRAIN_START;
+      default_states[ID_DATE_INPUT_TRAIN_END] = DEFAULT_TRAIN_END;
+      default_states[ID_DATE_INPUT_TEST_START] = DEFAULT_TEST_START;
+      default_states[ID_DATE_INPUT_TEST_END] = DEFAULT_TEST_END;
+
       default_states[STATE_FEATURES] = [];
+      default_states[STATE_ADDITIONAL_FEATURES] = [];
       for(var feature of features){
         default_states[STATE_FEATURES][feature.id] = false;
       }
+      for(var feature of additional_features){
+        default_states[STATE_ADDITIONAL_FEATURES][feature.id] = false;
+      }
       this.state = default_states;
-      console.log(this.state);
     }
 
+    setAllFeatures(e,bool){
+      console.log(e);
+      console.log(bool);
+      var updateState = this.state;
+      for(var obj in this.state[STATE_FEATURES]){
+        updateState[STATE_FEATURES][obj] = bool;
+      }
+      for(var obj in this.state[STATE_ADDITIONAL_FEATURES]){
+        updateState[STATE_ADDITIONAL_FEATURES][obj] = bool;
+      }
+      this.setState(updateState);
+    }
     onChange(e, data){
         var updateState = {}
         console.log(e.target.id);
@@ -86,19 +120,18 @@ class SettingContainer extends Component{
             updateState[STATE_FEATURES] = this.state[STATE_FEATURES];
             updateState[STATE_FEATURES][e.target.id]=data;
             break;
-          case TYPE_CHECK_BOX_ALGO:
-            updateState[STATE_ALGORITHMS] = this.state[STATE_ALGORITHMS];
-            updateState[STATE_ALGORITHMS][e.target.id]=data;
-
+          case TYPE_CHECK_BOX_ADDITIONAL_FEATURES:
+            updateState[STATE_ADDITIONAL_FEATURES] = this.state[STATE_ADDITIONAL_FEATURES];
+            updateState[STATE_ADDITIONAL_FEATURES][e.target.id]=data;
             break;
           case TYPE_DATE_INPUT:
             updateState[e.target.id]=data;
             if(data.length>4){
                 console.log(parseInt(data.substring(0,4)));
                 if(data.length>7){
-                  console.log(parseInt(data.substring(5,8)));
+                  console.log(parseInt(data.substring(5,7)));
                   if(data.length>=10){
-                    console.log(parseInt(data.substring(9,11)));
+                    console.log(parseInt(data.substring(8,10)));
                   }
                 }
             }
@@ -111,6 +144,8 @@ class SettingContainer extends Component{
         });
     }
 
+    // Tranfrom yyyy/mm/dd into the format of 11 Jan 2016
+
     train(){
 
       var options = {
@@ -120,7 +155,6 @@ class SettingContainer extends Component{
         normalize: false,
         scale: false,
         continuous_split: true,
-        additional_features: [],
         time_formats: [],
         addit_delimiters: []
       };
@@ -128,11 +162,19 @@ class SettingContainer extends Component{
       for(var key in this.state[STATE_FEATURES]){
         if(this.state[STATE_FEATURES][key]) feature_list.push(key);
       }
+      var additional_feature_list = [];
+      for(var key in this.state[STATE_ADDITIONAL_FEATURES]){
+        if(this.state[STATE_ADDITIONAL_FEATURES][key]) additional_feature_list.push(key);
+      }
+
       options['features_to_use'] = feature_list;
-      options['start_train']  = this.state[ID_DATE_INPUT_TRAIN_START];
-      options['end_train']    = this.state[ID_DATE_INPUT_TRAIN_END];
-      options['start_test']   = this.state[ID_DATE_INPUT_TEST_START];
-      options['end_test']     = this.state[ID_DATE_INPUT_TEST_END];
+      options['additional_features'] = additional_feature_list,
+      options['layers']= [
+        feature_list.length,
+        Math.floor((feature_list.length +2)/2),
+        Math.floor((feature_list.length +2)/2),
+        2
+      ];
       options['model_to_use'] = "REGRESS_RAND_FOREST";
 
       const STANDARD_LEN = 10;
@@ -143,14 +185,21 @@ class SettingContainer extends Component{
             if(parseInt(date_input.substring(5,7))<=12){
               if(parseInt(date_input.substring(5,7))<=12){
 
-              }else console.log(date_input_field+": day should be smaller than 30");
-            }else console.log(date_input_field+": month should be smaller than 12");
-          }else console.log(date_input_field+": year should be bigger than 2009");
-        }else  console.log(date_input_field+"<10");
+              }else; //console.log(date_input_field+": day should be smaller than 30");
+            }else; //console.log(date_input_field+": month should be smaller than 12");
+          }else; //console.log(date_input_field+": year should be bigger than 2009");
+        }else ; //console.log(date_input_field+"<10");
 
       }
 
-      console.log(feature_list);
+      const transformDate = (date)=> {
+        return date.substring(8,10)+" "+MONTHS[parseInt(date.substring(5,7))-1]+" "+date.substring(0,4);
+      }
+      DATE_INPUT_ID_LIST.map(function(index){
+        options[index] = transformDate(this.state[index]);
+      }.bind(this));
+
+      console.log(options);
        fetch('/api', {
             method : 'POST',
             headers: {'Accept': 'application/json',
@@ -160,8 +209,7 @@ class SettingContainer extends Component{
         }).then(function(res) {
           res.json().then(function(res){
             console.log("received from server");
-            console.log(res);
-            this.props.handler(res);
+            this.props.handler({graph:res, params: options});
           }.bind(this));
         }.bind(this));
         // .catch(function(err) {
@@ -176,7 +224,7 @@ class SettingContainer extends Component{
           <div className = "upper-setting section-border">
             <div className = "upper-left-setting">
               <div className = "section-title">Training Type</div>
-              <select name = {TYPE_OPTION} id = {TYPE_OPTION} onChange={this.onChange}>
+              <select className = 'select-box' name = {TYPE_OPTION} id = {TYPE_OPTION_TIME} onChange={this.onChange}>
                 <option value='daily'>Daily</option>
                 <option value='hourly'>Hourly</option>
               </select>
@@ -184,38 +232,61 @@ class SettingContainer extends Component{
             </div>
             <div className = "upper-right-setting">
                 <div className = "section-title">Algorithm</div>
-                {
-                    algorithms.map(function(obj, index){
+                  <select className = 'select-box' name = {TYPE_OPTION} id = {TYPE_OPTION_ALGO} onChange={this.onChange}>
+                  {
+                    algorithms.map(function(obj){
                       return(
-                        <CheckBox name = {TYPE_CHECK_BOX_ALGO} key = {index} id = {obj.id} label = {obj.label} handler = {this.onChange}/>
-                      );
-                    }.bind(this))
-                }
+                        <option value = {obj.id}>{obj.label}</option>
+                      )
+                    })
+                  }
+                  </select>
             </div>
           </div>
           <div className = "clear-both"/>
           <div className = "center-setting section-border">
           <div className = "section-title">Features</div>
-          {
-              features.map(function(obj, index){
-                return(
-                  <CheckBox name = {TYPE_CHECK_BOX_FEATURES} key = {index} id = {obj.id} label = {obj.label} handler = {this.onChange}/>
-                );
-              }.bind(this))
-          }
+              <div className = 'features-left'>
+                {
+                  features.map(function(obj, index){
+                    return(
+                      <CheckBox name = {TYPE_CHECK_BOX_FEATURES} isChecked = {this.state[STATE_FEATURES][obj.id]}
+                         key = {index} id = {obj.id} label = {obj.label} handler = {this.onChange}/>
+                    );
+                  }.bind(this))
+                }
+              </div>
+              <div className = 'features-right'>
+                {
+                  additional_features.map(function(obj, index){
+                    return(
+                      <CheckBox name = {TYPE_CHECK_BOX_ADDITIONAL_FEATURES} isChecked = {this.state[STATE_ADDITIONAL_FEATURES][obj.id]}
+                         key = {index} id = {obj.id} label = {obj.label} handler = {this.onChange}/>
+                    );
+                  }.bind(this))
+                }
+              </div>
+              <div className = "clear-both"/>
+
+            <div>
+              <button onClick = {(e)=>this.setAllFeatures(e,true)}>Select All</button>
+              <button onClick = {(e)=>this.setAllFeatures(e,false)}>Select None</button>
+              <div className = "clear-both"/>
+            </div>
           </div>
+
           <div className = "lower-setting section-border">
             <div className = "date-input-section">
               <div className = "section-title">Train Period</div>
-              <DateInput id = {ID_DATE_INPUT_TRAIN_START} name = {TYPE_DATE_INPUT} label = {LABEL_DATE_INPUT_START}handler = {this.onChange}/>
-              <DateInput id = {ID_DATE_INPUT_TRAIN_END}   name = {TYPE_DATE_INPUT} label = {LABEL_DATE_INPUT_END}handler = {this.onChange}/>
+              <DateInput id = {ID_DATE_INPUT_TRAIN_START} name = {TYPE_DATE_INPUT} default_value = {DEFAULT_TRAIN_END} label = {LABEL_DATE_INPUT_START}handler = {this.onChange}/>
+              <DateInput id = {ID_DATE_INPUT_TRAIN_END}   name = {TYPE_DATE_INPUT} default_value = {DEFAULT_TRAIN_END} label = {LABEL_DATE_INPUT_END}handler = {this.onChange}/>
               <div className = "clear-both"/>
             </div>
             <hr/>
             <div className = "date-input-section">
               <div className = "section-title">Test Period</div>
-              <DateInput id = {ID_DATE_INPUT_TEST_START} name = {TYPE_DATE_INPUT} label = {LABEL_DATE_INPUT_START}handler = {this.onChange}/>
-              <DateInput id = {ID_DATE_INPUT_TEST_END}   name = {TYPE_DATE_INPUT} label = {LABEL_DATE_INPUT_END}handler = {this.onChange}/>
+              <DateInput id = {ID_DATE_INPUT_TEST_START} name = {TYPE_DATE_INPUT} default_value = {DEFAULT_TEST_START} label = {LABEL_DATE_INPUT_START}handler = {this.onChange}/>
+              <DateInput id = {ID_DATE_INPUT_TEST_END}   name = {TYPE_DATE_INPUT} default_value = {DEFAULT_TEST_END}label = {LABEL_DATE_INPUT_END}handler = {this.onChange}/>
               <div className = "clear-both"/>
               <button id = "send-train" onClick = {this.train}>Train</button>
             </div>
@@ -227,3 +298,10 @@ class SettingContainer extends Component{
 }
 
 export default SettingContainer;
+// {
+//     algorithms.map(function(obj, index){
+//       return(
+//         <CheckBox name = {TYPE_CHECK_BOX_ALGO} key = {index} id = {obj.id} label = {obj.label} handler = {this.onChange}/>
+//       );
+//     }.bind(this))
+// }

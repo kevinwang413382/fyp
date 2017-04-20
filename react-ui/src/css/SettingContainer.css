@@ -10,21 +10,25 @@
 .upper-setting{
 
   width: 100%;
-  height: 150px;
+  height: 90px;
 
 }
 .center-setting{
   height: 300px;
   width: 100%;
 }
+.center-setting button{
+  margin-left: 10px;
+  float:left;
+}
 .upper-left-setting{
   float: left;
   width: 50%;
   height: 100%;
 }
-.upper-left-setting select{
+.select-box{
   margin-top:  20px;
-  width:  90px;
+  width:  120px;
   height: 30px
 }
 
@@ -43,6 +47,14 @@
   border-style:solid;
   border-color: lightgrey;
 
+}
+.features-left{
+  width: 45%;
+  float: left;
+}
+.features-right{
+  width: 45%;
+  float: left;
 }
 
 .lower-setting{

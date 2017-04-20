@@ -5,7 +5,7 @@ class CheckBox extends Component{
   constructor(props){
     super(props);
     this.state = {
-      isChecked: false
+      isChecked: props.isChecked
     }
     this.onChange = this.onChange.bind(this);
   }
@@ -17,7 +17,11 @@ class CheckBox extends Component{
 
 
   }
-
+  componentWillReceiveProps(nextProps) {
+    this.setState({ isChecked: nextProps.isChecked },function(){
+      //console.log(nextProps);
+    });
+  }
   render(){
     return(
       <div className = "box">
