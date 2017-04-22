@@ -20,36 +20,41 @@ class GraphContainer extends Component{
         this.handleTimeRangeChange = this.handleTimeRangeChange.bind(this);
         this.handleTrackerChanged = this.handleTrackerChanged.bind(this);
 
-
-
-
-        this.state = {
+        var default_state = {
             showMetrics: true,
             showDot: false,
             height: 300,
             tracker: null,
-            actual_price: "--",
-            predicted_price: "--",
             trackerEvent: null,
             timerange:  this.props.timeseries.range(),
             timeseries: this.props.timeseries,
             metric: this.props.metrics,
-            params: this.props.params
+            params: this.props.params,
+            max: this.props.max,
+            min: this.props.min
         };
+        for(var column of this.props.timeseries.columns()){
+          default_state[column] = '--';
+        }
+        this.state = default_state;
     }
 
 
 
     handleTrackerChanged(t) {
       if(t){
+
         const e = this.state.timeseries.atTime(t);
         const eventTime = new Date(
         e.begin().getTime() + (e.end().getTime() - e.begin().getTime()) / 2);
            //trim to 2nd position in decimal
-        this.setState({ tracker: eventTime, trackerEvent: e
-          , actual_price: e.get("actual_price").toFixed(2)
-          , predicted_price: e.get("predicted_price").toFixed(2)
-        });
+        var updateState = {
+          tracker: eventTime, trackerEvent: e
+        }
+        for(var column of this.state.timeseries.columns()){
+          updateState[column] = e.get(column).toFixed(2)
+        }
+        this.setState(updateState);
       }else{
         this.setState({ tracker: null, trackerEvent: null, actual_price: '--', predicted_price: '--'});
       }
@@ -60,18 +65,18 @@ class GraphContainer extends Component{
     }
 
     renderMarker() {
-      if (!this.state.tracker) {
-        return <g />
-      }
-
+        if (!this.state.tracker) {
+          return <g />
+        }
+        var column_to_mark = this.state.timeseries.columns()[0];
         return (
           <EventMarker
               type="flag"
               axis="y"
               event ={this.state.trackerEvent}
-              column="actual_price"
+              column = {column_to_mark}
               info={[
-                { label: "Price", value: this.state.predicted_price }
+                { label: "Price", value: this.state[column_to_mark] }
               ]}
               infoTimeFormat="%Y %m %d"
               infoWidth={120}
@@ -80,6 +85,18 @@ class GraphContainer extends Component{
           />
         );
 
+    }
+    componentWillReceiveProps(nextProps) {
+      this.setState(
+        {
+          timerange:  nextProps.timeseries.range(),
+          timeseries: nextProps.timeseries,
+          metric: nextProps.metrics,
+          params: nextProps.params,
+          max: nextProps.max,
+          min: nextProps.min
+
+      });
     }
 
     onChange(){
@@ -122,14 +139,18 @@ class GraphContainer extends Component{
 
                     </div>
                     <div id = "price-tag-section">
-                        <div className = "price-tag" >
-                            <p>Actual</p>
-                            <p>{this.state.actual_price}</p>
-                        </div>
-                        <div className = "price-tag" >
-                              <p>Prediction</p>
-                              <p>{this.state.predicted_price}</p>
-                        </div>
+                        {
+                          this.state.timeseries.columns().map(function(index){
+                            return(
+                                <div className = "price-tag" >
+                                    <p>{index}</p>
+                                    <p>{this.state[index]}</p>
+                                </div>
+                            )
+                          }.bind(this))
+                        }
+
+
                         <div className = "clear-both"/>
                     </div>
 
@@ -150,8 +171,8 @@ class GraphContainer extends Component{
                                 <ChartRow height={this.state.height}>
                                     <YAxis
                                         id="y"
-                                        min={500}
-                                        max={1500}
+                                        min={this.state.min}
+                                        max={this.state.max}
                                         width="60"
                                         type="linear"
                                         format="$,.2f"
@@ -184,13 +205,23 @@ class GraphContainer extends Component{
                    </div>
                    <div>{
                    (this.state.showMetrics)?
-                     <div className = "metric-container border-section">{
-                         this.props.metrics.map(function(obj){
-                           return (
-                             <p> {obj.id +": "+ obj.value}  </p>
-                           );
-                         })
-                       }
+                     <div className = "metric-container border-section">
+                        <table>
+                            <tr>{
+                              // header
+                             this.props.metrics.map(function(obj){
+                               return (<td>{obj.id}</td>);
+                             })
+                            }
+                            </tr>
+                            <tr>{
+                              // actual values
+                             this.props.metrics.map(function(obj){
+                               return (<td>{obj.value}</td>);
+                             })
+                            }
+                            </tr>
+                        </table>
                      </div>
                      :
                      <div className = ' params-container border-section'>

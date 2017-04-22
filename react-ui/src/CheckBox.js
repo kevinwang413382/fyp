@@ -10,10 +10,10 @@ class CheckBox extends Component{
     this.onChange = this.onChange.bind(this);
   }
   onChange(e){
+
     this.setState({isChecked: (this.state.isChecked)? false: true})
     this.props.handler(e,(this.state.isChecked)? false: true);
     // as there is some delay in setstate
-    console.log(this.props.id);
 
 
   }

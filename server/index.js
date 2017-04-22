@@ -5,7 +5,7 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const app = express();
 const PORT = process.env.PORT || 5000;
-const FILEPATH = 'server/1491548723887.json';
+const FILEPATH = 'data_hourly.json';
 
 
 var requestData = {
@@ -29,15 +29,7 @@ var requestData = {
 
 
 function read(){
-  // fs.readFile(FILEPATH, function (err, data) {
-  //     console.log(req.body);
-  //     if (err) {
-  //        return console.error(err);
-  //     }
-  //     obj = JSON.parse(data);
-  //     res.send(data);
-  //     console.log("sending file data");
-  //  });
+
 }
 
 function write(filepath, body){
@@ -53,7 +45,8 @@ app.use(bodyParser.json());
 app.use(express.static(path.resolve(__dirname, '../react-ui/build')));
 
 // Answer API requests.
-app.post('/api', function (req, res) {
+app.post('/daily', function (req, res) {
+  console.log('Daily prediction');
   console.log(req.body);
   var options = {
       uri: 'http://113.28.150.73:9100/prepare',
@@ -64,6 +57,15 @@ app.post('/api', function (req, res) {
       },
       body: JSON.stringify(req.body)
   };
+  //  fs.readFile(FILEPATH, function (err, data) {
+  //      if (err) {
+  //         return console.error(err);
+  //      }
+  //      res.set('Content-Type', 'application/json');
+  //      res.send(JSON.parse(data));
+  //      console.log(JSON.parse(data));
+  //   });
+
   request(options, function(error, response, body){
     if(error) console.log(error);
     else {
@@ -75,7 +77,8 @@ app.post('/api', function (req, res) {
     			else{
              console.log("writing and sending response");
              var date = (new Date()).getTime();
-             write(date+".json",JSON.toString(body));
+             write(date+".json",JSON.stringify(body));
+             console.log(body);
              res.set('Content-Type', 'application/json');
              res.send(body);
           }
@@ -86,6 +89,32 @@ app.post('/api', function (req, res) {
 
 });
 
+app.post('/hourly',function(req,res){
+
+
+
+    console.log('Hourly prediction');
+    var options = {
+        uri: 'http://113.28.150.73:9100/hourly',
+        method: "POST",
+        json: true,
+        headers: {
+            "content-type": "application/json",
+        },
+        body: JSON.stringify(req.body)
+    }
+    console.log(options);
+    request(options, function(error, response, body){
+        if(error) console.log(error);
+        else {
+          console.log("writing and sending response");
+          var date = (new Date()).getTime();
+          write(date+".json",JSON.stringify(body));
+          res.set('Content-Type', 'application/json');
+          res.send(body);
+    	}
+    });
+});
 // All remaining requests return the React app, so it can handle routing.
 app.get('*', function(request, response) {
   response.sendFile(path.resolve(__dirname, '../react-ui/build', 'index.html'));

@@ -5,13 +5,14 @@ import { TimeSeries } from "pondjs";
 import './css/Container.css'
 const _graph = require('./data.json');
 const default_graph =   {
-    metrics:[],
-    graph_data: [
-    ],
-    actual_prediction: [
-      {"day":0,"prediction":0}
-    ]
+    model_type: 'REGRE',
+    prediction_type: 'daily',
+    graph: _graph,
+    params: {}
 };
+const default_prediction_graph = [
+  {'day':0,'prediction':0}
+]
 const default_params = {
   "classification": false,
   "diff_regression": true,
@@ -32,13 +33,16 @@ const default_params = {
 
 const TYPE_REQUEST_PARAMS = 'request_params';
 const TYPE_GRAPH = 'graph';
+const TYPE_PREDICTION_DAILY ='daily';
+const TYPE_PREDICTION_HOURLY = 'hourly';
+
 
 class Container extends Component{
     constructor(){
       super();
       var _metrics = [];
-      for(var index in _graph.metrics){
-        var obj = {id: index, value:_graph.metrics[index]};
+      for(var index in default_graph.metrics){
+        var obj = {id: index, value:default_graph.metrics[index]};
         _metrics.push(obj);
       }
 
@@ -46,46 +50,67 @@ class Container extends Component{
       this.buildPoints = this.buildPoints.bind(this);
       this.onDataReceived = this.onDataReceived.bind(this);
       this.onSelected = this.onSelected.bind(this);
+      this.changeDisplay = this.changeDisplay.bind(this);
       const timeSeries = new TimeSeries({
-          name: "Default",
-          columns: ["time", "actual_price", "predicted_price"],
-          points: this.buildPoints(default_graph)
+          name: "validation",
+          columns: ["time", "predicted_price", "actual_price"],
+          points : this.buildPoints(TYPE_PREDICTION_DAILY,default_graph.graph.graph_data)
+      });
+      const prediction_timeSeries = new TimeSeries({
+          name: 'Prediction',
+          columns: ["time", "predicted_price"],
+          points : this.buildPredictionPoints(TYPE_PREDICTION_DAILY,default_graph.graph.actual_prediction)
       });
       this.state = {
+        show: 'validation',
         graphs: [
-          {timeseries: timeSeries, metrics: _metrics, show: true, params: default_params}
+          {
+            show: true,
+            validation:{timeseries: timeSeries           , metrics: _metrics, params: default_params, max: 1500, min: 600},
+            prediction:{timeseries: prediction_timeSeries, metrics: _metrics, params: default_params, max: 1500, min: 600}
+          }
         ]
       }
     }
-    buildPoints(actual_data) {
+    buildPoints(prediction_type,graph_data) {
         let points = [];
-        var last_unix_time;
+        for(let i = 0; i <graph_data.length; i++){
 
-        for(let i = 0; i < actual_data.graph_data.length; i++){
-
-          var date_string = actual_data.graph_data[i]['date'].substring(0, 10)+ " 00:00:00";
+          var date_string = (prediction_type=='daily')?graph_data[i]['date'].substring(0, 10)+" 00:00:00"
+                                                      :graph_data[i]['date'];
           var unix_time = new Date(date_string).getTime();
-          if(i == actual_data.graph_data.length-1) last_unix_time = unix_time;
           points.push(  [unix_time,
-                        actual_data.graph_data[i]['prediction'],
-                        actual_data.graph_data[i]['label']]
+                        graph_data[i]['prediction'],
+                        graph_data[i]['label']]
                     )
         }
-
-        for(var point of actual_data.actual_prediction){
-          console.log(point.prediction);
-          //
-           points.push([
-             last_unix_time + point['day']*86400000,
-             point.prediction,
-             point.prediction
-           ]);
-        }
-
         return points;
     }
+    buildPredictionPoints(prediction_type,prediction_data){
+      let points = [];
+      let currentTime = new Date(new Date().getFullYear()+'-'+(new Date().getMonth()+1)+'-'+ new Date().getDate()).getTime();
+
+      let multiple = (prediction_type == 'daily')? 86400000: 360000;
+      for(var point of prediction_data){
+         points.push([
+           currentTime + ((prediction_type=='daily')?point['day']:point['hour']-1)*multiple,
+           point['prediction']
+         ]);
+      }
+      return points;
+    }
+
+    changeDisplay(type){
+        if(this.state.show == type) return;
+        var updateState = this.state;
+        updateState['show'] = type;
+        this.setState({show: type},function(){
+          console.log(this.state);
+        });
+    }
+
     onSelected(e, index){
-      console.log(index);
+
       var updateState = this.state.graphs;
       for(var i in this.state.graphs){
         updateState[i].show = (i==index)? true:false;
@@ -102,26 +127,74 @@ class Container extends Component{
       var graph_data = data.graph;
       var params_data = data.params;
       var _timeseries =  new TimeSeries({
-          name: "Result " + this.state.graphs.length,
+          name: "Result " + this.state.graphs.length+": Validation",
           columns: ["time", "actual_price", "predicted_price"],
-          points: this.buildPoints(graph_data)
+          points: this.buildPoints(data.prediction_type,graph_data['graph_data'])
       });
+      var _prediction_timeseries =  new TimeSeries({
+          name: "Result " + this.state.graphs.length+": Prediction",
+          columns: ["time", "predicted_price"],
+          points: this.buildPoints(data.prediction_type,graph_data['actual_prediction'])
+      });
+
+
       var _metrics = [];
       for(var index in graph_data.metrics){
         var obj = {id: index, value:graph_data.metrics[index]};
         _metrics.push(obj);
       }
       var updateState = {};
+
+      // pushing the new graph to graph array
       updateState['graphs']= this.state.graphs;
       for(var i in updateState['graphs']){
         if(updateState['graphs'][i].show) updateState['graphs'][i].show = false;
       }
-      updateState['graphs'].push({timeseries: _timeseries, metrics: _metrics, show: true, params: params_data});
+      // get the max and min
+      // var max = graph_data['graph_data'].reduce(function(a,b){
+      //   console.log(a);
+      // },0);
+      var validation_max = 0;
+      var prediction_max = 0 ;
+      var validation_min = 100000;
+      var prediction_min = 1000000 ;
+      for(var point of graph_data['graph_data']){
+          validation_max = (Math.max(point.label,point.prediction)>validation_max)? Math.max(point.label,point.prediction): validation_max;
+          validation_min = (Math.min(point.label,point.prediction)<validation_min)? Math.min(point.label,point.prediction): validation_min;
+      }
+      for(var point of graph_data['actual_prediction']){
+          prediction_max = (Math.max(point.label,point.prediction)>prediction_max)? Math.max(point.label,point.prediction): prediction_max;
+          prediction_min = (Math.min(point.label,point.prediction)<prediction_min)? Math.min(point.label,point.prediction): prediction_min;
+      }
+      var coef = 0.5;
+      updateState['graphs'].push(
+        {
+          'validation':{
+              timeseries: _timeseries,
+              max: validation_max+coef*(validation_max-validation_min),
+              min: Math.max(0,validation_min-coef*(validation_max-validation_min)),
+              metrics: _metrics,
+              show: true,
+              params: params_data,
+              model_type: (data.model_type = 'REGRE')? 'REGRE': 'CLASS',
+              prediction_type: (data.prediction_type = 'daily')? 'daily': 'hourly',
+          },
+          'prediction':{
+              timeseries: _prediction_timeseries,
+              max: prediction_max+coef*(prediction_max-prediction_min),
+              min: Math.max(0, prediction_min-coef*(prediction_max-prediction_min)),
+              metrics: _metrics,
+              show: true,
+              params: params_data,
+              model_type: (data.model_type = 'REGRE')? 'REGRE': 'CLASS',
+              prediction_type: (data.prediction_type = 'daily')? 'daily': 'hourly',
+          }
+        });
 
 
       this.setState(updateState,function(){
-        console.log(this.state);
-      });
+          this.onSelected('',this.state.graphs.length-1);
+      }.bind(this));
     }
     render(){
       return(
@@ -130,26 +203,33 @@ class Container extends Component{
               <SettingContainer handler = {(data)=>this.onDataReceived(data)}/>
             </div>
             <div className = 'graph-container'>
-              {
-                this.state.graphs.map(function(obj,index){
-                    return (
+              <button onClick = {(e)=>this.changeDisplay('validation')}>Validation</button>
+              <button onClick = {(e)=>this.changeDisplay('prediction')}>Prediction</button>
 
-                        (obj.show)?
-                        <GraphContainer metrics = {obj.metrics} timeseries = {obj.timeseries} params = {obj.params}/>
+              {
+                this.state.graphs.map(function(graph,index){
+
+                  return (
+
+                        (graph.show)?
+
+                            <GraphContainer metrics = {graph[this.state.show].metrics} timeseries = {graph[this.state.show].timeseries} params = {graph[this.state.show].params}
+                            max = {graph[this.state.show].max} min = {graph[this.state.show].min}/>
+
                         : null
 
                     );
-                })
+                }.bind(this))
               }
               </div>
               <div className = "graph-select-list">
                 {
                   this.state.graphs.map(function(obj, index){
                     if(index==0) return null;
-                    var style_selected = {'background-color': 'green'};
+                    var style_selected = {'background-color': '#848484'};
                     return(
 
-                      <div style = {(this.state.graphs[index].show)?style_selected:null}onClick = {(e)=>this.onSelected(e,index)}>
+                      <div style = {(this.state.graphs[index].show)?style_selected:null} onClick = {(e)=>this.onSelected(e,index)}>
                         {'result '+index}
                       </div>
                     );
